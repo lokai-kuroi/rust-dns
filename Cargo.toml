@@ -1,0 +1,14 @@
+[package]
+name = "rust_dns"
+version = "0.1.0"
+edition = "2024"
+authors = ["Lokai Kuroi <lokai.kuroi@gmail.com>"]
+license = "Apache 2.0"
+description = "Implementation of a DNS-Server written in rust."
+readme = "README.md"
+homepage = "https://github.com/lokai-kuroi/rust-dns"
+repository = "https://github.com/lokai-kuroi/rust-dns"
+
+[dependencies]
+clap = { version = "4.6", features = ["derive"] }
+anyhow = { version = "1.0" }
