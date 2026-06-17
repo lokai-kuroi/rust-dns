@@ -11,4 +11,6 @@ repository = "https://github.com/lokai-kuroi/rust-dns"
 
 [dependencies]
 clap = { version = "4.6", features = ["derive"] }
-anyhow = { version = "1.0" }
+human-panic = "2.0.8"
+exitcode = "1.1.2"
+anyhow = "1.0"
