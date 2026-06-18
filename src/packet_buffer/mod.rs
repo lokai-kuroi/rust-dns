@@ -16,7 +16,7 @@ impl BytePacketBuffer {
 
     // Sets the read pointer to a specific position, result in an Error if its out of bound
     // fn seek
-    fn set_reader_pos(&mut self, pos: usize) -> Result<()>{
+    fn seek(&mut self, pos: usize) -> Result<()>{
         // TODO Change to not magic number
         if pos > 512 {
             eprintln!("Cannot set new reader positon, will result out of bound"); // TODO Change to
@@ -27,12 +27,12 @@ impl BytePacketBuffer {
     }
 
     // Get Current Positon
-    fn get_cur_pos(&self) -> usize {
+    fn pos(&self) -> usize {
         self.reader_pos
     }
 
     // Moving the read pointer positon by x steps
-    pub fn step_positon_pointer(&mut self, steps: usize) -> Result<()> {
+    pub fn step(&mut self, steps: usize) -> Result<()> {
         self.reader_pos += steps;
         if self.reader_pos > 512 {
             eprintln!("Change in {} steps resulted in a invalid pointer. Reset pointer to last state", steps);
@@ -54,12 +54,12 @@ impl BytePacketBuffer {
     }
 
     // Read from buffer without changing the position pointer
-    fn get(&mut self) -> Result<u8> {
+    fn get(&mut self, pos: usize) -> Result<u8> {
         if self.reader_pos >= 512 {
             eprintln!("Read Position out of Bounds");
             bail!("Read Position out of Bounds");
         }
-        Ok(self.buffer[self.reader_pos])
+        Ok(self.buffer[pos])
     }
 
     fn get_range(&mut self, start: usize, len: usize) -> Result<&[u8]> {
@@ -81,8 +81,53 @@ impl BytePacketBuffer {
     }
 
     // Read qname
-    // TODO To Implement
     fn read_qname(&mut self, outstr: &mut String) -> Result<()> {
+        let mut pos = self.pos();
+
+        let mut jumped = false;
+        let max_jumps = 5;
+        let mut jumps_performed = 0;
+        
+        let mut delim = "";
+        loop {
+            if jumps_performed > max_jumps {
+                bail!("Limit of jumps exceeded");
+            }
+
+            let len = self.get(pos)?;
+
+            if (len & 0xC0) == 0xC0 {
+                if !jumped {
+                    self.seek(pos + 2)?;
+                }
+
+                let b2 = self.get(pos + 1)? as u16;
+                let offset = (((len as u16) ^ 0xC0) << 8) | b2;
+                pos = offset as usize;
+
+                jumped = true;
+                jumps_performed += 1;
+                
+                continue;
+            } else {
+                pos += 1;
+
+                if len == 0 { break; };
+                
+                outstr.push_str(delim);
+
+                let str_buffer = self.get_range(pos, len as usize)?;
+                outstr.push_str(&String::from_utf8_lossy(str_buffer).to_lowercase());
+
+                delim = ".";
+                pos += len as usize;
+            }
+        }
+
+        if !jumped {
+            self.seek(pos)?;
+        }
+
         Ok(())
     }
 }
